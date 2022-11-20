@@ -3,14 +3,12 @@ import { initProvider } from "./service/provider-service";
 import { getTownState } from "./service/town-service";
 import { upgradeBuilding } from "./service/upgrade-service";
 
-const TOWN_ID = 116;
-
 (async () => {
   require("dotenv").config();
 
   await initProvider();
 
-  const state = await getTownState(116);
+  const state = await getTownState(Number(process.env.TOWN_ID!));
 
   console.log(state);
 
