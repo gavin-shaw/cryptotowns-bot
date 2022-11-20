@@ -30,10 +30,12 @@ export async function executePlan(state: TownState, plan: Plan) {
         info(`Upgrading ${action.params[0]} to tier ${action.params[1]}`);
 
         await upgradeBuilding(state.id, action.params[0], action.params[1]);
+        break;
       case "train-units":
         info(`Training ${action.params[1]} x ${action.params[0]}`);
 
         await trainUnits(state.id, action.params[0], action.params[1]);
+        break;
     }
   }
 }
