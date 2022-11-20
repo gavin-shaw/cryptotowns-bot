@@ -8,48 +8,79 @@ import _ from "lodash";
 import { buildPlan, executePlan } from "./service/plan-service";
 import { claimResources } from "./service/resource-service";
 import { claimUnitUpgrades } from "./service/unit-service";
+import { TOWN_TOKEN_IDS } from "./service/config-service";
+import { debug, error, info } from "./service/log-service";
 
 (async () => {
+  info("Fetching block number...");
+
   await initProvider();
 
-  const townTokenId = Number(process.env.TOWN_TOKEN_ID!);
+  info("Authenticating...");
 
-  console.log("Authenticating...");
   await authenticate();
 
-  console.log("Getting town state...");
+  for (const townTokenId of TOWN_TOKEN_IDS) {
+    info(`Processing town ${townTokenId}`);
+
+    try {
+      await processTown(townTokenId);
+    } catch (ex) {
+      error("Error occurred")
+      debug(_(ex).keys().value())
+    }
+  }
+
+  process.exit();
+})();
+
+async function processTown(townTokenId: number) {
+  info("Getting town state...");
+
   let state = await getTownState(townTokenId);
 
   let stateStale = false;
 
-  if (Object.keys(state.unclaimed.buildings).length > 0) {
-    console.log("Claiming buildings...");
+  if (_(state.unclaimed.buildings).keys().size() > 0) {
+    info("Claiming buildings...");
+
     await claimBuildingUpgrades(state.id);
+
     stateStale = true;
   }
 
-  if (Object.keys(state.unclaimed.units).length > 0) {
-    console.log("Claiming units...");
+  if (_(state.unclaimed.units).keys().size() > 0) {
+    info("Claiming units...");
+
     await claimUnitUpgrades(state.id);
+
     stateStale = true;
   }
 
   if (stateStale) {
-    console.log("Getting town state...");
+    info("Getting town state...");
+
     state = await getTownState(townTokenId);
   }
+
+  info("Town state:")
+
+  debug(state)
 
   const plan = buildPlan(state);
 
   if (plan.length == 0) {
-    console.log("No plan to execute, exiting...");
-    process.exit()
+    info("No plan to execute, exiting...");
+    return;
   }
 
-  console.log("Executing plan:");
-  console.log(plan);
+  info("Claiming resources..");
 
   await claimResources(state.id);
 
+  info("Executing plan:");
+
+  debug(plan);
+
   await executePlan(state, plan);
-})();
+}
