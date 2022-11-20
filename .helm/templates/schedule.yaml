@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: schedule
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            job: schedule
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: nodejs
+              image: "{{ .Values.werf.image.app }}"
+              workingDir: /app
+              env:
+                - name: WALLET_PHRASE
+                  value: "{{ .Values.wallet_phrase }}"
+                - name: TOWN_TOKEN_ID
+                  value: "{{ .Values.town_token_id }}"

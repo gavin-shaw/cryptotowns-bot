@@ -1,0 +1,52 @@
+name: Werf Converge
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+      - staging
+jobs:
+  converge:
+    name: Converge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install werf CLI
+        uses: werf/actions/install@v1.2
+
+      - name: Create kube config
+        run: |
+          KUBECONFIG=$(mktemp -d)/config
+          base64 -d <(printf "%s" $KUBE_CONFIG_BASE64_DATA) > $KUBECONFIG
+          echo KUBECONFIG=$KUBECONFIG >> $GITHUB_ENV
+        env:
+          KUBE_CONFIG_BASE64_DATA: ${{ secrets.KUBE_CONFIG_BASE64_DATA }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      
+      - name: Production deploy
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          source $(werf ci-env github --as-file)
+          werf converge
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          WERF_PLATFORM: linux/amd64
+          WERF_SECRET_KEY: ${{ secrets.WERF_SECRET_KEY }}
+
+      - name: Staging deploy
+        if: ${{ github.ref == 'refs/heads/staging' }}
+        run: |
+          source $(werf ci-env github --as-file)
+          werf converge --env staging
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          WERF_PLATFORM: linux/amd64
+          WERF_SECRET_KEY: ${{ secrets.WERF_SECRET_KEY }}

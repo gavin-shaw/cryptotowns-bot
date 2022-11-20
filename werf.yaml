@@ -1,0 +1,6 @@
+configVersion: 1
+project: cryptotowns-bot
+---
+image: app
+dockerfile: Dockerfile
+context: .

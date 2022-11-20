@@ -1,3 +1,5 @@
 .env
 node_modules
 dist
+clear-values.yaml
+.werf_secret_key
