@@ -47,6 +47,9 @@ export async function getTownState(townId: number): Promise<TownState> {
               to_tier
               complete_on
             }
+            base_food_cost
+            base_gold_cost
+            base_wood_cost
           }
         }
         hp
@@ -150,6 +153,7 @@ export async function getTownState(townId: number): Promise<TownState> {
     .value();
 
   return {
+    id: town.id,
     resources: town.resource,
     buildings,
     units,
@@ -178,12 +182,22 @@ export async function getTownState(townId: number): Promise<TownState> {
       buildings: inProgressBuildings,
       units: inProgressUnits,
     },
+    buildingCosts: _(town.buildings)
+      .keyBy("role")
+      .mapValues((building) => ({
+        food: building.building_enum.base_food_cost,
+        wood: building.building_enum.base_wood_cost,
+        gold: building.building_enum.base_gold_cost,
+      }))
+      .value(),
   };
 }
 
-interface TownState {
+export interface TownState {
+  readonly id: string;
   readonly resources: Resources;
   readonly buildings: Buildings;
+  readonly buildingCosts: Record<string, Resources>;
   readonly units: Units;
 
   readonly unclaimed: {

@@ -1,9 +1,10 @@
-import axios from "axios"
-import { getWallet } from "./wallet-service"
+import axios from "axios";
 import { provider } from './provider-service';
+import { wallet } from "./wallet-service";
+
+export let token: string = "";
 
 export async function authenticate() {
-    const wallet = getWallet()
 
     const address = await wallet.getAddress()
     const blockNumber = await provider.getBlockNumber()
@@ -17,7 +18,5 @@ export async function authenticate() {
     
     const response = await axios.post("https://cryptotowns-server.herokuapp.com/jwt/issue-token", body)
 
-    const { signature: token } = response.data;
-
-    return token;
+    token = response.data.signature;
 }
