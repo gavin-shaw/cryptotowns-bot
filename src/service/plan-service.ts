@@ -42,10 +42,6 @@ export function buildPlan(state: TownState): Plan {
       }
     }
 
-    if (newActions.length === 0) {
-      break;
-    }
-
     plan.push(...newActions);
   }
 
