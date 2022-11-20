@@ -23,7 +23,12 @@ import { debug, error, info } from "./service/log-service";
   for (const townTokenId of TOWN_TOKEN_IDS) {
     info(`Processing town ${townTokenId}`);
 
-    await processTown(townTokenId);
+    try {
+      await processTown(townTokenId);
+    } catch (ex) {
+      error("Error occurred");
+      debug(ex);
+    }
   }
 
   process.exit();
