@@ -23,7 +23,7 @@ export function buildPlan(state: TownState): Plan {
       const toTier = state.buildings[building] + 1;
 
       const cost = _(state.buildingCosts[building])
-        .mapValues((it) => Math.floor(it * (1.07 ^ toTier)))
+        .mapValues((baseCost) => Math.floor(baseCost * Math.pow(1.07, toTier)))
         .value();
 
       if (
