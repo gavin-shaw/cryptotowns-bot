@@ -41,17 +41,18 @@ export function addUnitActions(state: TownState, balance: Balance, plan: Plan) {
       continue;
     }
 
-    actions.push(
-      ..._(trainingCounts)
-        .entries()
-        .map((params: [string, number]) => ({
-          type: "train-units" as ActionType,
-          params,
-        }))
-        .value()
-    );
+    const newActions = _(trainingCounts)
+      .entries()
+      .filter(([, count]) => count > 0)
+      .map((params: [string, number]) => ({
+        type: "train-units" as ActionType,
+        params,
+      }))
+      .value();
 
-    inProgressCount += _(trainingCounts).keys().size();
+    actions.push(...newActions);
+
+    inProgressCount += newActions.length;
   }
 
   plan.push(...actions);
