@@ -2,6 +2,7 @@ import { BUILDING_PRIORITY } from "../priority";
 import { TownState } from "./town-service";
 import _ from "lodash";
 import { upgradeBuilding } from "./building-service";
+import { info } from "./log-service";
 
 export function buildPlan(state: TownState): Plan {
   const balance = {
@@ -16,7 +17,7 @@ export function buildPlan(state: TownState): Plan {
     const newActions: Action[] = [];
 
     for (const building of priorityRow) {
-      if (state.inProgress[building]) {
+      if (state.inProgress.buildings[building]) {
         continue;
       }
 
@@ -52,7 +53,7 @@ export async function executePlan(state: TownState, plan: Plan) {
   for (const action of plan) {
     switch (action.type) {
       case "upgrade-building":
-        console.log(
+        info(
           `Upgrading ${action.params[0]} to tier ${action.params[1]}`
         );
         await upgradeBuilding(state.id, action.params[0], action.params[1]);
