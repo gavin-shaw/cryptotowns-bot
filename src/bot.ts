@@ -5,7 +5,7 @@ import { initProvider } from "./service/provider-service";
 import { getTownState } from "./service/town-service";
 import { claimBuildingUpgrades } from "./service/building-service";
 import _ from "lodash";
-import { buildPlan, executePlan } from "./service/plan-service";
+import { buildPlan, executePlan } from "./service/planner/plan-service";
 import { claimResources } from "./service/resource-service";
 import { claimUnitUpgrades } from "./service/unit-service";
 import { TOWN_TOKEN_IDS } from "./service/config-service";
@@ -23,12 +23,7 @@ import { debug, error, info } from "./service/log-service";
   for (const townTokenId of TOWN_TOKEN_IDS) {
     info(`Processing town ${townTokenId}`);
 
-    try {
-      await processTown(townTokenId);
-    } catch (ex) {
-      error("Error occurred")
-      debug(_(ex).keys().value())
-    }
+    await processTown(townTokenId);
   }
 
   process.exit();
@@ -63,9 +58,9 @@ async function processTown(townTokenId: number) {
     state = await getTownState(townTokenId);
   }
 
-  info("Town state:")
+  info("Town state:");
 
-  debug(state)
+  debug(_.omit(state, ["buildingCosts", "id"]));
 
   const plan = buildPlan(state);
 

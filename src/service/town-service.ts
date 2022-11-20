@@ -1,97 +1,12 @@
-import { request, gql } from "graphql-request";
 import _ from "lodash";
+import { query } from "./graphql-service";
 import { blockNumber } from "./provider-service";
-
-function query(query: any, variables: any) {
-  return request(
-    "https://cryptotowns-hasura.herokuapp.com/v1/graphql",
-    query,
-    variables
-  );
-}
+import { TOWN_QUERY } from "./queries/town-query";
 
 export async function getTownState(townId: number): Promise<TownState> {
-  const QUERY = gql`
-    query GetTowns($townId: Int) {
-      town(
-        where: {
-          _and: [
-            { token_id: { _eq: $townId }, season: { active: { _eq: true } } }
-          ]
-        }
-      ) {
-        resource {
-          food
-          gold
-          wood
-        }
-        buildings {
-          role
-          tier
-          building_enum {
-            building_upgrade_logs(
-              limit: 1
-              order_by: [{ created_on: desc }]
-              where: {
-                _and: [
-                  {
-                    claimed: { _eq: false }
-                    town: {
-                      token_id: { _eq: $townId }
-                      season: { active: { _eq: true } }
-                    }
-                  }
-                ]
-              }
-            ) {
-              to_tier
-              complete_on
-            }
-            base_food_cost
-            base_gold_cost
-            base_wood_cost
-          }
-        }
-        hp
-        units {
-          role
-          count
-          unit_enum {
-            unit_train_logs(
-              limit: 1
-              order_by: [{ created_on: desc }]
-              where: {
-                _and: [
-                  {
-                    claimed: { _eq: false }
-                    town: {
-                      token_id: { _eq: $townId }
-                      season: { active: { _eq: true } }
-                    }
-                  }
-                ]
-              }
-            ) {
-              count
-              complete_on
-            }
-          }
-        }
-        resource_latest_claim {
-          food_latest_claim_on
-          gold_latest_claim_on
-          wood_latest_claim_on
-        }
-        id
-      }
-    }
-  `;
+  const { town: towns, unit_enum: unitEnums, building_enum: buildingEnums } = await query(TOWN_QUERY, { townId });
 
-  const VARIABLES = { townId };
-
-  let { town } = await query(QUERY, VARIABLES);
-
-  town = town[0];
+  const town = towns[0];
 
   // @ts-ignore
   const buildings: Buildings = _(town.buildings)
@@ -130,26 +45,22 @@ export async function getTownState(townId: number): Promise<TownState> {
     )
     .value();
 
-  // @ts-ignore
-  const unclaimedUnits: Units = _(town.units)
-    .filter(
-      (unit) =>
-        unit.unit_enum.unit_train_logs.length > 0 &&
-        unit.unit_enum.unit_train_logs[0].complete_on <= blockNumber
+  const unclaimedUnits: UnitQueue[] = _(town.units)
+    .flatMap((unit) =>
+      _(unit.unit_enum.unit_train_logs)
+        .filter((log) => log.complete_on <= blockNumber)
+        .map((log) => _.pick(log, ["role", "count"]))
+        .value()
     )
-    .keyBy("role")
-    .mapValues((unit) => unit.unit_enum.unit_train_logs[0].count)
     .value();
 
-  // @ts-ignore
-  const inProgressUnits: Units = _(town.units)
-    .filter(
-      (unit) =>
-        unit.unit_enum.unit_train_logs.length > 0 &&
-        unit.unit_enum.unit_train_logs[0].complete_on > blockNumber
+  const inProgressUnits: UnitQueue[] = _(town.units)
+    .flatMap((unit) =>
+      _(unit.unit_enum.unit_train_logs)
+        .filter((log) => log.complete_on > blockNumber)
+        .map((log) => _.pick(log, ["role", "count"]))
+        .value()
     )
-    .keyBy("role")
-    .mapValues((unit) => unit.unit_enum.unit_train_logs[0].count)
     .value();
 
   return {
@@ -182,12 +93,20 @@ export async function getTownState(townId: number): Promise<TownState> {
       buildings: inProgressBuildings,
       units: inProgressUnits,
     },
-    buildingCosts: _(town.buildings)
-      .keyBy("role")
-      .mapValues((building) => ({
-        food: building.building_enum.base_food_cost,
-        wood: building.building_enum.base_wood_cost,
-        gold: building.building_enum.base_gold_cost,
+    buildingCosts: _(buildingEnums)
+      .keyBy("name")
+      .mapValues((buildingEnum) => ({
+        food: buildingEnum.base_food_cost,
+        wood: buildingEnum.base_wood_cost,
+        gold: buildingEnum.base_gold_cost,
+      }))
+      .value(),
+    unitCosts: _(unitEnums)
+      .keyBy("name")
+      .mapValues((unitEnum) => ({
+        food: unitEnum.food_cost,
+        wood: unitEnum.wood_cost,
+        gold: unitEnum.gold_cost,
       }))
       .value(),
   };
@@ -198,21 +117,27 @@ export interface TownState {
   readonly resources: Resources;
   readonly buildings: Buildings;
   readonly buildingCosts: Record<string, Resources>;
+  readonly unitCosts: Record<string, Resources>;
   readonly units: Units;
 
   readonly unclaimed: {
     readonly resources: Resources;
     readonly buildings: Buildings;
-    readonly units: Units;
+    readonly units: UnitQueue[];
   };
 
   readonly inProgress: {
     readonly buildings: Buildings;
-    readonly units: Units;
+    readonly units: UnitQueue[];
   };
 }
 
-interface Units {
+export interface UnitQueue {
+  readonly role: string;
+  readonly count: number;
+}
+
+export interface Units {
   readonly SWORD: number;
   readonly RAIDER: number;
   readonly PIKE: number;
@@ -220,7 +145,7 @@ interface Units {
   readonly TREBUCHET: number;
 }
 
-interface Buildings {
+export interface Buildings {
   readonly WALL: number;
   readonly FARM: number;
   readonly SIEGE: number;
@@ -231,7 +156,8 @@ interface Buildings {
   readonly BARRACK: number;
   readonly TOWN_HALL: number;
 }
-interface Resources {
+
+export interface Resources {
   readonly wood: number;
   readonly food: number;
   readonly gold: number;
