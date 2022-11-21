@@ -1,8 +1,6 @@
-import { BUILDING_UPGRADE_ORDER, TrainingCap, UNIT_TRAIN_ORDER } from "./plan";
-import { Resources, TownState } from "../town-service";
-import _ from "lodash";
 import { upgradeBuilding } from "../building-service";
 import { info } from "../log-service";
+import { Resources, TownState } from "../town-service";
 import { trainUnits } from "../unit-service";
 import { addBuildingActions } from "./building-plan-service";
 import { addUnitActions } from "./unit-plan-service";

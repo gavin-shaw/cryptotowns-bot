@@ -4,7 +4,11 @@ import { blockNumber } from "./provider-service";
 import { TOWN_QUERY } from "./queries/town-query";
 
 export async function getTownState(townId: number): Promise<TownState> {
-  const { town: towns, unit_enum: unitEnums, building_enum: buildingEnums } = await query(TOWN_QUERY, { townId });
+  const {
+    town: towns,
+    unit_enum: unitEnums,
+    building_enum: buildingEnums,
+  } = await query(TOWN_QUERY, { townId });
 
   const town = towns[0];
 
@@ -63,7 +67,7 @@ export async function getTownState(townId: number): Promise<TownState> {
     )
     .value();
 
-  return {
+  const state = {
     id: town.id,
     resources: town.resource,
     buildings,
@@ -109,7 +113,35 @@ export async function getTownState(townId: number): Promise<TownState> {
         gold: unitEnum.gold_cost,
       }))
       .value(),
+    totalCosts: {},
   };
+
+  addTotalCosts(state);
+
+  return state;
+}
+
+function addTotalCosts(state: TownState) {
+  const allocation = {};
+
+  for (const buildingName of _.keys(state.buildings)) {
+    let cost = 0;
+
+    for (let i = 1; i <= state.buildings[buildingName]; i++) {
+      cost += Math.floor(
+        _(state.buildingCosts[buildingName]).values().sum() * Math.pow(1.07, i)
+      );
+    }
+
+    allocation[buildingName] = cost;
+  }
+
+  for (const unitName of _.keys(state.units)) {
+    allocation[unitName] =
+      _(state.unitCosts[unitName]).values().sum() * state.units[unitName];
+  }
+
+  state.totalCosts = allocation;
 }
 
 export interface TownState {
@@ -130,6 +162,8 @@ export interface TownState {
     readonly buildings: Buildings;
     readonly units: UnitQueue[];
   };
+
+  totalCosts: Record<string, number>;
 }
 
 export interface UnitQueue {

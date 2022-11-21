@@ -1,26 +1,23 @@
-export const BUILDING_UPGRADE_ORDER: BuildingGroup[] = [
-  ["WALL"],
-  ["TOWN_HALL"],
-  ["LUMBER", "FARM", "GOLD"],
-  ["BARRACK", "STABLE"],
-  ["HOUSING"],
-  ["SIEGE"],
+export const BUILDING_WEIGHTS: BuildingWeight[] = [
+  ["WALL", 4],
+  ["TOWN_HALL", 4],
+  ["LUMBER", 4],
+  ["FARM", 4],
+  ["GOLD", 4],
+  ["BARRACK", 2],
+  ["STABLE", 2],
+  ["HOUSING", 1],
+  ["SIEGE", 1],
 ];
 
-export const UNIT_TRAIN_ORDER: TrainingGroup[] = [
-  [
-    ["KNIGHT", 50],
-    ["PIKE", 200],
-  ],
-  [
-    ["SWORD", 200],
-    ["RAIDER", 50],
-  ],
-  [["TREBUCHET", 1]],
+export const UNIT_WEIGHTS: UnitWeight[] = [
+  ["KNIGHT", 4],
+  ["PIKE", 4],
+  ["SWORD", 2],
+  ["RAIDER", 2],
+  ["TREBUCHET", 1],
 ];
 
-export type BuildingGroup = string[];
+export type BuildingWeight = [string, number];
 
-export type TrainingGroup = TrainingCap[];
-
-export type TrainingCap = [string, number];
+export type UnitWeight = [string, number];

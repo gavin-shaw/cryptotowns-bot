@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { BUILDING_UPGRADE_ORDER } from "./plan";
+import { BUILDING_WEIGHTS, UNIT_WEIGHTS } from "./plan";
 import { TownState } from "../town-service";
 import { Balance, Plan, affordable, spend } from "./plan-service";
 
@@ -8,26 +8,35 @@ export function addBuildingActions(
   balance: Balance,
   plan: Plan
 ) {
-  for (const row of BUILDING_UPGRADE_ORDER) {
-    for (const role of row) {
-      if (state.inProgress.buildings[role]) {
-        continue;
-      }
+  const totalCost = _(state.totalCosts).values().sum();
+  const totalWeight = _(BUILDING_WEIGHTS).map(1).sum() + _(UNIT_WEIGHTS).map(1).sum()
 
-      const toTier = state.buildings[role] + 1;
+  for (const [name, weight] of BUILDING_WEIGHTS) {
 
-      const cost = _(state.buildingCosts[role])
-        .mapValues((baseCost) => Math.floor(baseCost * Math.pow(1.07, toTier)))
-        .value();
+    if (state.inProgress.buildings[name]) {
+      continue;
+    }
 
-      if (affordable(balance, cost)) {
-        plan.push({
-          type: "upgrade-building",
-          params: [role, toTier],
-        });
+    const totalBuildingCost = state.totalCosts[name];
 
-        spend(balance, cost);
-      }
+    if ((totalBuildingCost / totalCost) > (weight / totalWeight)) {
+      continue
+    }
+
+    const toTier = state.buildings[name] + 1;
+
+    const upgradeCost = _(state.buildingCosts[name])
+      .mapValues((baseCost) => Math.floor(baseCost * Math.pow(1.07, toTier)))
+      .value();
+
+
+    if (affordable(balance, upgradeCost)) {
+      plan.push({
+        type: "upgrade-building",
+        params: [name, toTier],
+      });
+
+      spend(balance, upgradeCost);
     }
   }
 }

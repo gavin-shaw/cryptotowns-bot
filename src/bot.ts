@@ -65,7 +65,7 @@ async function processTown(townTokenId: number) {
 
   info("Town state:");
 
-  debug(_.omit(state, ["buildingCosts", "id"]));
+  debug(_.omit(state, ["buildingCosts", "unitCosts", "id"]));
 
   const plan = buildPlan(state);
 
