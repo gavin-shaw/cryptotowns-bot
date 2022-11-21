@@ -13,8 +13,8 @@ export const BUILDING_WEIGHTS: BuildingWeight[] = [
 export const UNIT_WEIGHTS: UnitWeight[] = [
   ["KNIGHT", 4],
   ["PIKE", 4],
-  ["SWORD", 2],
-  ["RAIDER", 2],
+  ["SWORD", 1],
+  ["RAIDER", 1],
   ["TREBUCHET", 1],
 ];
 
