@@ -1,6 +1,6 @@
 export const BUILDING_WEIGHTS: BuildingWeight[] = [
+  ["TOWN_HALL", 8],
   ["WALL", 4],
-  ["TOWN_HALL", 4],
   ["LUMBER", 4],
   ["FARM", 4],
   ["GOLD", 4],

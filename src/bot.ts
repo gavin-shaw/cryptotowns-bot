@@ -2,7 +2,12 @@ require("dotenv").config();
 
 import { authenticate } from "./service/auth-service";
 import { initProvider } from "./service/provider-service";
-import { getAllTowns, getTownState, TownSummary } from "./service/town-service";
+import {
+  getAllTowns,
+  getTownState,
+  TownState,
+  TownSummary,
+} from "./service/town-service";
 import { claimBuildingUpgrades } from "./service/building-service";
 import _ from "lodash";
 import { buildPlan, executePlan } from "./service/planner/plan-service";
@@ -10,6 +15,7 @@ import { claimResources } from "./service/resource-service";
 import { claimUnitUpgrades } from "./service/unit-service";
 import { TOWN_TOKEN_IDS } from "./service/config-service";
 import { debug, error, info } from "./service/log-service";
+import { BUILDING_WEIGHTS, UNIT_WEIGHTS } from "./service/planner/plan";
 
 (async () => {
   info("Fetching block number...");
@@ -69,7 +75,9 @@ async function processTown(townTokenId: number, towns: TownSummary[]) {
 
   info("Town state:");
 
-  debug(_.omit(state, ["buildingCosts", "unitCosts", "id"]));
+  debug(_.omit(state, ["buildingCosts", "unitCosts", "totalCosts", "id"]));
+
+  debugWeights(state);
 
   const plan = await buildPlan(state, towns);
 
@@ -87,4 +95,27 @@ async function processTown(townTokenId: number, towns: TownSummary[]) {
   debug(plan);
 
   await executePlan(state, plan);
+}
+
+function debugWeights(state: TownState) {
+  const totalCost = _(state.totalCosts).values().sum();
+  const totalWeights =
+    _(BUILDING_WEIGHTS).map(1).sum() + _(UNIT_WEIGHTS).map(1).sum();
+
+  debug(
+    _(BUILDING_WEIGHTS)
+      .map(([name]) => [
+        name,
+        (state.totalCosts[name] * totalWeights) / totalCost,
+      ])
+      .value()
+  );
+  debug(
+    _(UNIT_WEIGHTS)
+      .map(([name]) => [
+        name,
+        (state.totalCosts[name] * totalWeights) / totalCost,
+      ])
+      .value()
+  );
 }
