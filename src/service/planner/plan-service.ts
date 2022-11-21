@@ -1,11 +1,13 @@
+import { battle } from "../battle-service";
 import { upgradeBuilding } from "../building-service";
 import { info } from "../log-service";
-import { Resources, TownState } from "../town-service";
+import { Resources, TownState, TownSummary } from "../town-service";
 import { trainUnits } from "../unit-service";
+import { addAttackActions } from "./attack-plan-service";
 import { addBuildingActions } from "./building-plan-service";
 import { addUnitActions } from "./unit-plan-service";
 
-export function buildPlan(state: TownState): Plan {
+export async function buildPlan(state: TownState, towns: TownSummary[]): Promise<Plan> {
   const balance = {
     wood: state.resources.wood + state.unclaimed.resources.wood,
     food: state.resources.food + state.unclaimed.resources.food,
@@ -17,6 +19,8 @@ export function buildPlan(state: TownState): Plan {
   addBuildingActions(state, balance, plan);
 
   addUnitActions(state, balance, plan);
+
+  await addAttackActions(state, plan, towns);
 
   return plan;
 }
@@ -33,6 +37,11 @@ export async function executePlan(state: TownState, plan: Plan) {
         info(`Training ${action.params[1]} x ${action.params[0]}`);
 
         await trainUnits(state.id, action.params[0], action.params[1]);
+        break;
+      case "battle":
+        info(`Battling Town #${action.params[1]} for ${action.params[2]} resources at distance ${action.params[3]}`);
+
+        await battle(state.id, action.params[0]);
         break;
     }
   }
@@ -56,14 +65,13 @@ export type Plan = Action[];
 
 export interface Action {
   readonly type: ActionType;
-  readonly params: [string, number];
+  readonly params: any[];
 }
 
-export type ActionType = "upgrade-building" | "train-units";
+export type ActionType = "upgrade-building" | "train-units" | "battle";
 
 export interface Balance {
   wood: number;
   food: number;
   gold: number;
 }
-

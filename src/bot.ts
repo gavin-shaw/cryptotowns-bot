@@ -2,7 +2,7 @@ require("dotenv").config();
 
 import { authenticate } from "./service/auth-service";
 import { initProvider } from "./service/provider-service";
-import { getTownState } from "./service/town-service";
+import { getAllTowns, getTownState, TownSummary } from "./service/town-service";
 import { claimBuildingUpgrades } from "./service/building-service";
 import _ from "lodash";
 import { buildPlan, executePlan } from "./service/planner/plan-service";
@@ -20,11 +20,15 @@ import { debug, error, info } from "./service/log-service";
 
   await authenticate();
 
+  info("Fetching all towns...");
+
+  const towns = await getAllTowns();
+
   for (const townTokenId of TOWN_TOKEN_IDS) {
     info(`Processing town ${townTokenId}`);
 
     try {
-      await processTown(townTokenId);
+      await processTown(townTokenId, towns);
     } catch (ex) {
       error("Error occurred");
       debug(ex);
@@ -34,7 +38,7 @@ import { debug, error, info } from "./service/log-service";
   process.exit();
 })();
 
-async function processTown(townTokenId: number) {
+async function processTown(townTokenId: number, towns: TownSummary[]) {
   info("Getting town state...");
 
   let state = await getTownState(townTokenId);
@@ -67,7 +71,7 @@ async function processTown(townTokenId: number) {
 
   debug(_.omit(state, ["buildingCosts", "unitCosts", "id"]));
 
-  const plan = buildPlan(state);
+  const plan = await buildPlan(state, towns);
 
   if (plan.length == 0) {
     info("No plan to execute, exiting...");
