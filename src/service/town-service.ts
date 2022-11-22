@@ -1,28 +1,38 @@
 import _ from "lodash";
+import {
+  DEFAULT_BUILDINGS,
+  getUpgradeBuildingMetadataMap,
+} from "./building-service";
 import { query } from "./graphql-service";
 import { blockNumber } from "./provider-service";
-import { TOWN_QUERY } from "./queries/town-query";
+import { TownType, TOWN_QUERY } from "./queries/town-query";
+import { DEFAULT_UNITS, getTrainUnitMetadataMap } from "./unit-service";
 
 export async function getTownState(tokenId: number): Promise<TownState> {
-  const {
-    town: towns,
-    unit_enum: unitEnums,
-    building_enum: buildingEnums,
-  } = await query(TOWN_QUERY, { townId: tokenId });
+  const { town: towns } = await query<{ town: TownType[] }>(TOWN_QUERY, {
+    tokenId,
+  });
 
   const town = towns[0];
 
-  // @ts-ignore
-  const buildings: Buildings = _(town.buildings)
-    .keyBy("role")
-    .mapValues("tier")
-    .value();
+  const buildings = {
+    ...DEFAULT_BUILDINGS,
+    ..._(town.buildings).keyBy("role").mapValues("tier").value(),
+  };
 
-  // @ts-ignore
-  const units: Units = _(town.units).keyBy("role").mapValues("count").value();
+  const upgradeBuildingMetadataMap = await getUpgradeBuildingMetadataMap(
+    town.id,
+    buildings
+  );
 
-  // @ts-ignore
-  const unclaimedBuildings: Buildings = _(town.buildings)
+  const units = {
+    ...DEFAULT_UNITS,
+    ..._(town.units).keyBy("role").mapValues("count").value(),
+  };
+
+  const trainUnitMetadataMap = await getTrainUnitMetadataMap(town.id, units);
+
+  const unclaimedBuildings = _(town.buildings)
     .filter(
       (building) =>
         building.building_enum.building_upgrade_logs.length > 0 &&
@@ -35,8 +45,7 @@ export async function getTownState(tokenId: number): Promise<TownState> {
     )
     .value();
 
-  // @ts-ignore
-  const inProgressBuildings: Buildings = _(town.buildings)
+  const inProgressBuildings = _(town.buildings)
     .filter(
       (building) =>
         building.building_enum.building_upgrade_logs.length > 0 &&
@@ -49,7 +58,7 @@ export async function getTownState(tokenId: number): Promise<TownState> {
     )
     .value();
 
-  const unclaimedUnits: UnitQueue[] = _(town.units)
+  const unclaimedUnits = _(town.units)
     .flatMap((unit) =>
       _(unit.unit_enum.unit_train_logs)
         .filter((log) => log.complete_on <= blockNumber)
@@ -58,7 +67,7 @@ export async function getTownState(tokenId: number): Promise<TownState> {
     )
     .value();
 
-  const inProgressUnits: UnitQueue[] = _(town.units)
+  const inProgressUnits = _(town.units)
     .flatMap((unit) =>
       _(unit.unit_enum.unit_train_logs)
         .filter((log) => log.complete_on > blockNumber)
@@ -67,6 +76,28 @@ export async function getTownState(tokenId: number): Promise<TownState> {
     )
     .value();
 
+  const buildingEfficiency = _(upgradeBuildingMetadataMap)
+    .mapValues((metadata) => metadata.upgradeMetrics.currentTier)
+    .value();
+
+  const unclaimedResources = {
+    food: Math.floor(
+      (blockNumber - town.resource_latest_claim.food_latest_claim_on) *
+        buildings.FARM *
+        1.2
+    ),
+    gold: Math.floor(
+      (blockNumber - town.resource_latest_claim.gold_latest_claim_on) *
+        buildings.GOLD *
+        1.2
+    ),
+    wood: Math.floor(
+      (blockNumber - town.resource_latest_claim.wood_latest_claim_on) *
+        buildings.LUMBER *
+        1.2
+    ),
+  };
+
   const state: TownState = {
     id: town.id,
     tokenId: tokenId,
@@ -74,23 +105,7 @@ export async function getTownState(tokenId: number): Promise<TownState> {
     buildings,
     units,
     unclaimed: {
-      resources: {
-        food: Math.floor(
-          (blockNumber - town.resource_latest_claim.food_latest_claim_on) *
-            buildings.FARM *
-            1.2
-        ),
-        gold: Math.floor(
-          (blockNumber - town.resource_latest_claim.gold_latest_claim_on) *
-            buildings.GOLD *
-            1.2
-        ),
-        wood: Math.floor(
-          (blockNumber - town.resource_latest_claim.wood_latest_claim_on) *
-            buildings.LUMBER *
-            1.2
-        ),
-      },
+      resources: unclaimedResources,
       buildings: unclaimedBuildings,
       units: unclaimedUnits,
     },
@@ -98,23 +113,14 @@ export async function getTownState(tokenId: number): Promise<TownState> {
       buildings: inProgressBuildings,
       units: inProgressUnits,
     },
-    buildingCosts: _(buildingEnums)
-      .keyBy("name")
-      .mapValues((buildingEnum) => ({
-        food: buildingEnum.base_food_cost,
-        wood: buildingEnum.base_wood_cost,
-        gold: buildingEnum.base_gold_cost,
-      }))
+    buildingCosts: _(upgradeBuildingMetadataMap)
+      .mapValues((metadata) => _.pick(metadata, ["food", "wood", "gold", "time"]))
       .value(),
-    unitCosts: _(unitEnums)
-      .keyBy("name")
-      .mapValues((unitEnum) => ({
-        food: unitEnum.food_cost,
-        wood: unitEnum.wood_cost,
-        gold: unitEnum.gold_cost,
-      }))
+    unitCosts: _(trainUnitMetadataMap)
+      .mapValues((metadata) => _.pick(metadata, ["food", "wood", "gold", "time"]))
       .value(),
     totalCosts: {},
+    buildingEfficiency,
   };
 
   addTotalCosts(state);
@@ -165,37 +171,21 @@ export interface TownState {
     readonly units: UnitQueue[];
   };
 
+  readonly buildingEfficiency: Record<string, number>;
   totalCosts: Record<string, number>;
 }
 
-export interface UnitQueue {
+export type UnitQueue = Readonly<{
   readonly role: string;
   readonly count: number;
-}
+}>;
 
-export interface Units {
-  readonly SWORD: number;
-  readonly RAIDER: number;
-  readonly PIKE: number;
-  readonly KNIGHT: number;
-  readonly TREBUCHET: number;
-}
+export type Units = Readonly<Record<string, number>>;
+export type Buildings = Readonly<Record<string, number>>;
 
-export interface Buildings {
-  readonly WALL: number;
-  readonly FARM: number;
-  readonly SIEGE: number;
-  readonly STABLE: number;
-  readonly LUMBER: number;
-  readonly HOUSING: number;
-  readonly GOLD: number;
-  readonly BARRACK: number;
-  readonly TOWN_HALL: number;
-}
-
-export interface Resources {
-  readonly wood: number;
-  readonly food: number;
-  readonly gold: number;
-}
-
+export type Resources = Readonly<{
+  wood: number;
+  food: number;
+  gold: number;
+  time?: number;
+}>;

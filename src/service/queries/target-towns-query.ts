@@ -1,4 +1,5 @@
 import { gql } from "graphql-request";
+import { BuildingType, ResourceType, UnitType } from "./town-query";
 
 export const TARGET_TOWNS_QUERY = gql`
   query GetTargetTowns(
@@ -46,3 +47,12 @@ export const TARGET_TOWNS_QUERY = gql`
     }
   }
 `;
+
+export type TargetTownType = Readonly<{
+  id: string;
+  token_id: number;
+  hp: number;
+  resource: ResourceType;
+  buildings: BuildingType[];
+  units: UnitType[];
+}>

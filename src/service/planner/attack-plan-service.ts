@@ -1,6 +1,9 @@
 import _ from "lodash";
 import { query } from "../graphql-service";
-import { TARGET_TOWNS_QUERY } from "../queries/towns-query";
+import {
+  TargetTownType,
+  TARGET_TOWNS_QUERY,
+} from "../queries/target-towns-query";
 import { TownState } from "../town-service";
 import { Plan } from "./plan-service";
 
@@ -25,13 +28,16 @@ export async function addAttackActions(state: TownState, plan: Plan) {
 }
 
 export async function getTargetTowns(state: TownState): Promise<TargetTown[]> {
-  const { town: towns } = await query(TARGET_TOWNS_QUERY, {
-    maxWallTier: 2,
-    maxPikeCount: 0,
-    maxKnightCount: 0,
-    maxHp: 1000000,
-    minResources: 0,
-  });
+  const { town: towns } = await query<{ town: TargetTownType[] }>(
+    TARGET_TOWNS_QUERY,
+    {
+      maxWallTier: 2,
+      maxPikeCount: 0,
+      maxKnightCount: 0,
+      maxHp: 1000000,
+      minResources: 0,
+    }
+  );
 
   return _(towns)
     .filter((town) => town.buildings.length == 0 && town.units.length == 0)

@@ -1,10 +1,8 @@
-import { request, gql } from "graphql-request";
+import { request } from "graphql-request";
+import { GRAPHQL_URL } from "../config";
 
-const URL =
-  process.env.GRAPHQL_URL ??
-  "https://cryptotowns-hasura.herokuapp.com/v1/graphql";
+export async function query<T>(query: any, variables: any): Promise<T> {
+  const result = await request(GRAPHQL_URL, query, variables);
 
-export function query(query: any, variables: any) {
-  return request(URL, query, variables);
+  return result as T;
 }
-

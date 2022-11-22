@@ -2,6 +2,7 @@ import _ from "lodash";
 import { TownState } from "../town-service";
 import { BUILDING_WEIGHTS, UNIT_WEIGHTS } from "./plan";
 import { Action, affordable, Balance, Plan, spend } from "./plan-service";
+import { UNIT_QUEUE_MAX_MINUTES } from "../../config";
 
 export function addUnitActions(state: TownState, balance: Balance, plan: Plan) {
   let inProgressCount =
@@ -30,14 +31,29 @@ export function addUnitActions(state: TownState, balance: Balance, plan: Plan) {
       continue;
     }
 
-    actions.push({
-      type: "train-units",
-      params: [name, 1],
-    });
+    let trainCount = 0;
 
-    spend(balance, cost);
-    
-    inProgressCount++;
+    while (affordable(balance, cost)) {
+      trainCount++;
+
+      spend(balance, cost);
+
+      if (
+        trainCount * state.unitCosts[name].time! >
+        (UNIT_QUEUE_MAX_MINUTES * 60) / 12
+      ) {
+        break;
+      }
+    }
+
+    if (trainCount) {
+      actions.push({
+        type: "train-units",
+        params: [name, trainCount],
+      });
+
+      inProgressCount++;
+    }
   }
 
   plan.push(...actions);

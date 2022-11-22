@@ -1,19 +1,15 @@
 require("dotenv").config();
 
 import _ from "lodash";
+import { TOWN_TOKEN_IDS } from "./config";
 import { authenticate } from "./service/auth-service";
 import { claimBuildingUpgrades } from "./service/building-service";
-import { TOWN_TOKEN_IDS } from "./service/config-service";
 import { debug, error, info } from "./service/log-service";
-import { TargetTown } from "./service/planner/attack-plan-service";
 import { BUILDING_WEIGHTS, UNIT_WEIGHTS } from "./service/planner/plan";
 import { buildPlan, executePlan } from "./service/planner/plan-service";
 import { initProvider } from "./service/provider-service";
 import { claimResources } from "./service/resource-service";
-import {
-  getTownState,
-  TownState
-} from "./service/town-service";
+import { getTownState, TownState } from "./service/town-service";
 import { claimUnitUpgrades } from "./service/unit-service";
 
 (async () => {
@@ -83,9 +79,11 @@ async function processTown(townTokenId: number) {
     return;
   }
 
-  info("Claiming resources..");
+  if (!_.every(plan, (action) => action.type === "battle")) {
+    info("Claiming resources..");
 
-  await claimResources(state.id);
+    await claimResources(state.id);
+  }
 
   info("Executing plan:");
 

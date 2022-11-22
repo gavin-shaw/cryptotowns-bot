@@ -1,14 +1,17 @@
 import { gql } from "graphql-request";
 
 export const TOWN_QUERY = gql`
-  query GetTowns($townId: Int) {
+  query GetTowns($tokenId: Int) {
     town(
       where: {
         _and: [
-          { token_id: { _eq: $townId }, season: { active: { _eq: true } } }
+          { token_id: { _eq: $tokenId }, season: { active: { _eq: true } } }
         ]
       }
     ) {
+      id
+      token_id
+      hp
       resource {
         food
         gold
@@ -26,19 +29,19 @@ export const TOWN_QUERY = gql`
                 {
                   claimed: { _eq: false }
                   town: {
-                    token_id: { _eq: $townId }
+                    token_id: { _eq: $tokenId }
                     season: { active: { _eq: true } }
                   }
                 }
               ]
             }
           ) {
+            role
             to_tier
             complete_on
           }
         }
       }
-      hp
       units {
         role
         count
@@ -51,19 +54,17 @@ export const TOWN_QUERY = gql`
                 {
                   claimed: { _eq: false }
                   town: {
-                    token_id: { _eq: $townId }
+                    token_id: { _eq: $tokenId }
                     season: { active: { _eq: true } }
                   }
                 }
               ]
             }
           ) {
+            role
             count
             complete_on
           }
-          food_cost
-          gold_cost
-          wood_cost
         }
       }
       resource_latest_claim {
@@ -71,19 +72,60 @@ export const TOWN_QUERY = gql`
         gold_latest_claim_on
         wood_latest_claim_on
       }
-      id
-    }
-    unit_enum {
-      name
-      gold_cost
-      food_cost
-      wood_cost
-    }
-    building_enum {
-      base_food_cost
-      base_gold_cost
-      base_wood_cost
-      name
     }
   }
 `;
+
+export type TownType = Readonly<{
+  id: string;
+  token_id: number;
+  hp: number;
+  resource: ResourceType;
+  buildings: BuildingType[];
+  units: UnitType[];
+  resource_latest_claim: ResourceLatestClaimType;
+}>;
+
+export type UnitType = Readonly<{
+  role: string;
+  count: number;
+  unit_enum: UnitEnumType;
+}>;
+
+export type UnitEnumType = Readonly<{
+  unit_train_logs: UnitTrainLogType[];
+}>;
+
+export type UnitTrainLogType = Readonly<{
+  role: string;
+  count: number;
+  complete_on: number;
+}>;
+
+export type BuildingType = Readonly<{
+  role: string;
+  tier: number;
+  building_enum: BuildingEnumType;
+}>;
+
+export type BuildingEnumType = Readonly<{
+  building_upgrade_logs: BuildingUpgradeLogType[];
+}>;
+
+export type BuildingUpgradeLogType = Readonly<{
+  role: string;
+  to_tier: number;
+  complete_on: number;
+}>;
+
+export type ResourceType = Readonly<{
+  food: number;
+  wood: number;
+  gold: number;
+}>;
+
+export type ResourceLatestClaimType = Readonly<{
+  food_latest_claim_on: number;
+  gold_latest_claim_on: number;
+  wood_latest_claim_on: number;
+}>;

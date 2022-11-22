@@ -25,10 +25,7 @@ export function addBuildingActions(
 
     const toTier = state.buildings[name] + 1;
 
-    const upgradeCost = _(state.buildingCosts[name])
-      .mapValues((baseCost) => Math.floor(baseCost * Math.pow(1.07, toTier)))
-      .value();
-
+    const upgradeCost = state.buildingCosts[name]
 
     if (affordable(balance, upgradeCost)) {
       plan.push({
