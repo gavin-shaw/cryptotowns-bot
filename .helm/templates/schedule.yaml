@@ -25,4 +25,4 @@ spec:
                 - name: REST_BASE_URL
                   value: "{{ .Values.rest_base_url }}"
                 - name: GRAPHQL_URL
-                  value: "{{ .Values.grapql_url }}"
+                  value: "{{ .Values.graphql_url }}"
