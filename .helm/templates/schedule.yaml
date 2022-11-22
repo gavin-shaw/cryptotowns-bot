@@ -22,3 +22,7 @@ spec:
                   value: "{{ .Values.wallet_phrase }}"
                 - name: TOWN_TOKEN_ID
                   value: "{{ .Values.town_token_id }}"
+                - name: REST_BASE_URL
+                  value: "{{ .Values.rest_base_url }}"
+                - name: GRAPHQL_URL
+                  value: "{{ .Values.grapql_url }}"
