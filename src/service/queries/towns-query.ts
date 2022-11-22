@@ -1,26 +1,48 @@
 import { gql } from "graphql-request";
 
-export const TOWNS_QUERY = gql`
-  query GetTowns {
+export const TARGET_TOWNS_QUERY = gql`
+  query GetTargetTowns(
+    $maxWallTier: Int
+    $maxPikeCount: Int
+    $maxKnightCount: Int
+    $maxHp: Int
+    $minResources: Int
+  ) {
     town(
-      where: { season: { active: { _eq: true } } }
+      where: {
+        active: { _eq: true }
+        season: { active: { _eq: true } }
+        resource: {
+          food: { _gt: $minResources }
+          wood: { _gt: $minResources }
+          gold: { _gt: $minResources }
+        }
+        hp: { _lte: $maxHp }
+      }
     ) {
+      id
+      hp
+      token_id
       resource {
         food
         gold
         wood
       }
-      buildings {
+      buildings(where: { role: { _eq: "WALL" }, tier: { _gt: $maxWallTier } }) {
         role
         tier
       }
-      hp
-      token_id
-      units {
+      units(
+        where: {
+          _or: [
+            { role: { _eq: "PIKE" }, count: { _gt: $maxPikeCount } }
+            { role: { _eq: "KNIGHT" }, count: { _gt: $maxKnightCount } }
+          ]
+        }
+      ) {
         role
         count
       }
-      id
     }
   }
 `;

@@ -1,13 +1,13 @@
 import { battle } from "../battle-service";
 import { upgradeBuilding } from "../building-service";
 import { info } from "../log-service";
-import { Resources, TownState, TownSummary } from "../town-service";
+import { Resources, TownState } from "../town-service";
 import { trainUnits } from "../unit-service";
-import { addAttackActions } from "./attack-plan-service";
+import { addAttackActions, TargetTown } from "./attack-plan-service";
 import { addBuildingActions } from "./building-plan-service";
 import { addUnitActions } from "./unit-plan-service";
 
-export async function buildPlan(state: TownState, towns: TownSummary[]): Promise<Plan> {
+export async function buildPlan(state: TownState): Promise<Plan> {
   const balance = {
     wood: state.resources.wood + state.unclaimed.resources.wood,
     food: state.resources.food + state.unclaimed.resources.food,
@@ -20,7 +20,7 @@ export async function buildPlan(state: TownState, towns: TownSummary[]): Promise
 
   addUnitActions(state, balance, plan);
 
-  await addAttackActions(state, plan, towns);
+  await addAttackActions(state, plan);
 
   return plan;
 }
@@ -39,7 +39,9 @@ export async function executePlan(state: TownState, plan: Plan) {
         await trainUnits(state.id, action.params[0], action.params[1]);
         break;
       case "battle":
-        info(`Battling Town #${action.params[1]} for ${action.params[2]} resources at distance ${action.params[3]}`);
+        info(
+          `Battling Town #${action.params[1]} for ${action.params[2]} resources at distance ${action.params[3]}`
+        );
 
         await battle(state.id, action.params[0]);
         break;

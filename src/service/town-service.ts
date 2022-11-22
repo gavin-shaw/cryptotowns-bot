@@ -2,26 +2,6 @@ import _ from "lodash";
 import { query } from "./graphql-service";
 import { blockNumber } from "./provider-service";
 import { TOWN_QUERY } from "./queries/town-query";
-import { TOWNS_QUERY } from "./queries/towns-query";
-
-export async function getAllTowns(): Promise<TownSummary[]> {
-  const { town: towns } = await query(TOWNS_QUERY, {});
-
-  return _(towns)
-    .map((town) => ({
-      tokenId: town.token_id,
-      id: town.id,
-      resources: town.resource,
-      hp: town.hp,
-      units: _(town.units).keyBy("role").mapValues("count").value(),
-      buildings: _(town.buildings).keyBy("role").mapValues("tier").value(),
-    }))
-    .value();
-}
-
-
-
-
 
 export async function getTownState(tokenId: number): Promise<TownState> {
   const {
@@ -87,9 +67,9 @@ export async function getTownState(tokenId: number): Promise<TownState> {
     )
     .value();
 
-  const state = {
+  const state: TownState = {
     id: town.id,
-    token_id: tokenId,
+    tokenId: tokenId,
     resources: town.resource,
     buildings,
     units,
@@ -167,7 +147,7 @@ function addTotalCosts(state: TownState) {
 
 export interface TownState {
   readonly id: string;
-  readonly token_id: number;
+  readonly tokenId: number;
   readonly resources: Resources;
   readonly buildings: Buildings;
   readonly buildingCosts: Record<string, Resources>;
@@ -219,11 +199,3 @@ export interface Resources {
   readonly gold: number;
 }
 
-export interface TownSummary {
-  readonly tokenId: number;
-  readonly id: string;
-  readonly resources: Record<string, number>;
-  readonly hp: number;
-  readonly units: Record<string, number>;
-  readonly buildings: Record<string, number>;
-}

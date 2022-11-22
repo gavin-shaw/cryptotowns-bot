@@ -1,21 +1,20 @@
 require("dotenv").config();
 
-import { authenticate } from "./service/auth-service";
-import { initProvider } from "./service/provider-service";
-import {
-  getAllTowns,
-  getTownState,
-  TownState,
-  TownSummary,
-} from "./service/town-service";
-import { claimBuildingUpgrades } from "./service/building-service";
 import _ from "lodash";
-import { buildPlan, executePlan } from "./service/planner/plan-service";
-import { claimResources } from "./service/resource-service";
-import { claimUnitUpgrades } from "./service/unit-service";
+import { authenticate } from "./service/auth-service";
+import { claimBuildingUpgrades } from "./service/building-service";
 import { TOWN_TOKEN_IDS } from "./service/config-service";
 import { debug, error, info } from "./service/log-service";
+import { TargetTown } from "./service/planner/attack-plan-service";
 import { BUILDING_WEIGHTS, UNIT_WEIGHTS } from "./service/planner/plan";
+import { buildPlan, executePlan } from "./service/planner/plan-service";
+import { initProvider } from "./service/provider-service";
+import { claimResources } from "./service/resource-service";
+import {
+  getTownState,
+  TownState
+} from "./service/town-service";
+import { claimUnitUpgrades } from "./service/unit-service";
 
 (async () => {
   info("Fetching block number...");
@@ -28,13 +27,11 @@ import { BUILDING_WEIGHTS, UNIT_WEIGHTS } from "./service/planner/plan";
 
   info("Fetching all towns...");
 
-  const towns = await getAllTowns();
-
   for (const townTokenId of TOWN_TOKEN_IDS) {
     info(`Processing town ${townTokenId}`);
 
     try {
-      await processTown(townTokenId, towns);
+      await processTown(townTokenId);
     } catch (ex) {
       error("Error occurred");
       debug(ex);
@@ -44,7 +41,7 @@ import { BUILDING_WEIGHTS, UNIT_WEIGHTS } from "./service/planner/plan";
   process.exit();
 })();
 
-async function processTown(townTokenId: number, towns: TownSummary[]) {
+async function processTown(townTokenId: number) {
   info("Getting town state...");
 
   let state = await getTownState(townTokenId);
@@ -79,7 +76,7 @@ async function processTown(townTokenId: number, towns: TownSummary[]) {
 
   debugWeights(state);
 
-  const plan = await buildPlan(state, towns);
+  const plan = await buildPlan(state);
 
   if (plan.length == 0) {
     info("No plan to execute, exiting...");

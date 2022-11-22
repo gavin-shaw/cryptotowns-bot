@@ -1,27 +1,48 @@
 import _ from "lodash";
-import { getAllTowns, TownState, TownSummary } from "../town-service";
+import { query } from "../graphql-service";
+import { TARGET_TOWNS_QUERY } from "../queries/towns-query";
+import { TownState } from "../town-service";
 import { Plan } from "./plan-service";
 
-export async function addAttackActions(state: TownState, plan: Plan, towns: TownSummary[]) {
+export async function addAttackActions(state: TownState, plan: Plan) {
+  const targetTowns = await getTargetTowns(state);
 
-  const defTown = _(towns)
-    .filter(
-      (town) =>
-        town.hp <= 6000 &&
-        _(town.resources).values().sum() > 3000 &&
-        town.buildings["WALL"] <= 2 &&
-        (town.units["PIKE"] ?? 0) == 0 &&
-        (town.units["KNIGHT"] ?? 0) == 0
-    )
-    .sortBy((town) => calculateDistance(town.tokenId, state.token_id))
-    .first();
+  const targetTown = _(targetTowns).maxBy((town) =>
+    _(town.resources).values().sum()
+  );
 
-  if (!!defTown) {
+  if (!!targetTown) {
     plan.push({
       type: "battle",
-      params: [defTown.id, defTown.tokenId, _(defTown.resources).values().sum(), calculateDistance(defTown.tokenId, state.token_id)],
+      params: [
+        targetTown.id,
+        targetTown.tokenId,
+        _(targetTown.resources).values().sum(),
+        calculateDistance(targetTown.tokenId, state.tokenId),
+      ],
     });
   }
+}
+
+export async function getTargetTowns(state: TownState): Promise<TargetTown[]> {
+  const { town: towns } = await query(TARGET_TOWNS_QUERY, {
+    maxWallTier: 2,
+    maxPikeCount: 0,
+    maxKnightCount: 0,
+    maxHp: 1000000,
+    minResources: 0,
+  });
+
+  return _(towns)
+    .filter((town) => town.buildings.length == 0 && town.units.length == 0)
+    .map((town) => ({
+      id: town.id,
+      tokenId: town.token_id,
+      hp: town.hp,
+      resources: town.resource,
+      distance: calculateDistance(town.token_id, state.tokenId),
+    }))
+    .value();
 }
 
 function calculateDistance(defTownTokenId: number, atkTownTokenId: number) {
@@ -48,4 +69,12 @@ function getLocation(token_id: number): [number, number] {
       e >= o - i
         ? [-n, -n + (o - e)]
         : ((o -= i), e >= o - i ? [-n + (o - e), n] : [n, n - (o - e - i)]));
+}
+
+export interface TargetTown {
+  readonly id: string;
+  readonly tokenId: number;
+  readonly hp: number;
+  readonly resources: Record<string, number>;
+  readonly distance: number;
 }
