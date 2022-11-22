@@ -7,7 +7,7 @@ import { claimBuildingUpgrades } from "./service/building-service";
 import { debug, error, info } from "./service/log-service";
 import { BUILDING_WEIGHTS, UNIT_WEIGHTS } from "./service/planner/plan";
 import { buildPlan, executePlan } from "./service/planner/plan-service";
-import { initProvider } from "./service/provider-service";
+import { blockNumber, initProvider } from "./service/provider-service";
 import { claimResources } from "./service/resource-service";
 import { getTownState, TownState } from "./service/town-service";
 import { claimUnitUpgrades } from "./service/unit-service";
@@ -16,6 +16,8 @@ import { claimUnitUpgrades } from "./service/unit-service";
   info("Fetching block number...");
 
   await initProvider();
+
+  info(`Block number: ${blockNumber}`);
 
   info("Authenticating...");
 
