@@ -5,8 +5,8 @@ import { TOWN_TOKEN_IDS } from "./config";
 import { authenticate } from "./service/auth-service";
 import { claimBuildingUpgrades } from "./service/building-service";
 import { debug, error, info } from "./service/log-service";
-import { BUILDING_WEIGHTS, UNIT_WEIGHTS } from "./service/planner/plan";
-import { buildPlan, executePlan } from "./service/planner/plan-service";
+import { BUILDING_TARGETS, UNIT_TARGETS } from "./service/planner/plan";
+import { affordable, buildPlan, executePlan } from "./service/planner/plan-service";
 import { blockNumber, initProvider } from "./service/provider-service";
 import { claimResources } from "./service/resource-service";
 import { getTownState, TownState } from "./service/town-service";
@@ -68,11 +68,11 @@ async function processTown(townTokenId: number) {
     state = await getTownState(townTokenId);
   }
 
-  info("Town state:");
-
-  debug(_.omit(state, ["buildingCosts", "unitCosts", "totalCosts", "id"]));
-
   debugWeights(state);
+
+  // info("Town state:");
+
+  // debug(_.omit(state, ["buildingCosts", "unitCosts", "totalCosts", "id"]));
 
   const plan = await buildPlan(state);
 
@@ -96,23 +96,34 @@ async function processTown(townTokenId: number) {
 
 function debugWeights(state: TownState) {
   const totalCost = _(state.totalCosts).values().sum();
-  const totalWeights =
-    _(BUILDING_WEIGHTS).map(1).sum() + _(UNIT_WEIGHTS).map(1).sum();
+
+  debug("Plan vs Targets");
+
+  const balance = _(state.resources)
+    .mapValues((value, key) => value + state.unclaimed.resources[key])
+    .value()
 
   debug(
-    _(BUILDING_WEIGHTS)
-      .map(([name]) => [
-        name,
-        (state.totalCosts[name] * totalWeights) / totalCost,
-      ])
-      .value()
-  );
-  debug(
-    _(UNIT_WEIGHTS)
-      .map(([name]) => [
-        name,
-        (state.totalCosts[name] * totalWeights) / totalCost,
-      ])
+    _(BUILDING_TARGETS)
+      .union(UNIT_TARGETS)
+      .map(([name, target]) => {
+        const actual = Number(
+          ((state.totalCosts[name] * 100) / totalCost).toFixed(1)
+        );
+
+        let cost = state.unitCosts[name];
+        if (!cost) {
+          cost = state.buildingCosts[name]
+        }
+
+        return [
+          name,
+          target - actual > 0 ? "x" : "✓",
+          actual,
+          target,
+          !affordable(balance,cost) ? "x" : "✓",          
+        ];
+      })
       .value()
   );
 }

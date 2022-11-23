@@ -10,7 +10,7 @@ export async function post<T>(
 ): Promise<T> {
   const url = `${REST_BASE_URL}/${resource}`;
 
-  debug(`POST: ${url}`);
+  // debug(`POST: ${url}`);
 
   body.address = wallet.address;
 
@@ -40,7 +40,7 @@ export async function post<T>(
 export async function get<T>(resource: string): Promise<T> {
   const url = `${REST_BASE_URL}/${resource}`;
 
-  debug(`GET: ${url}`);
+  // debug(`GET: ${url}`);
 
   try {
     // TODO: we might need auth here later, not yet though

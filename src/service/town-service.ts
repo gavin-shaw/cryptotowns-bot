@@ -114,10 +114,14 @@ export async function getTownState(tokenId: number): Promise<TownState> {
       units: inProgressUnits,
     },
     buildingCosts: _(upgradeBuildingMetadataMap)
-      .mapValues((metadata) => _.pick(metadata, ["food", "wood", "gold", "time"]))
+      .mapValues((metadata) =>
+        _.pick(metadata, ["food", "wood", "gold", "time"])
+      )
       .value(),
     unitCosts: _(trainUnitMetadataMap)
-      .mapValues((metadata) => _.pick(metadata, ["food", "wood", "gold", "time"]))
+      .mapValues((metadata) =>
+        _.pick(metadata, ["food", "wood", "gold", "time"])
+      )
       .value(),
     totalCosts: {},
     buildingEfficiency,
@@ -128,24 +132,41 @@ export async function getTownState(tokenId: number): Promise<TownState> {
   return state;
 }
 
+function calcTotalBuildingCost(state: TownState, name: string, tier: number) {
+  let cost = 0;
+
+  const nextTierCost = _(state.buildingCosts[name])
+    .pick(["food", "wood", "gold"])
+    .values()
+    .sum();
+
+  for (let i = tier; i > 0; i--) {
+    cost += nextTierCost / Math.pow(1.07, i);
+  }
+
+  return cost;
+}
+
+function calcTotalUnitCost(state: TownState, name: string, count: number) {
+  return (
+    _(state.unitCosts[name]).pick(["food", "wood", "gold"]).values().sum() *
+    count
+  );
+}
+
 function addTotalCosts(state: TownState) {
   const allocation = {};
 
-  for (const buildingName of _.keys(state.buildings)) {
-    let cost = 0;
-
-    for (let i = 1; i <= state.buildings[buildingName]; i++) {
-      cost += Math.floor(
-        _(state.buildingCosts[buildingName]).values().sum() * Math.pow(1.07, i)
-      );
-    }
-
-    allocation[buildingName] = cost;
+  for (const name of _.keys(state.buildings)) {
+    allocation[name] = calcTotalBuildingCost(
+      state,
+      name,
+      state.buildings[name]
+    );
   }
 
-  for (const unitName of _.keys(state.units)) {
-    allocation[unitName] =
-      _(state.unitCosts[unitName]).values().sum() * state.units[unitName];
+  for (const name of _.keys(state.units)) {
+    allocation[name] = calcTotalUnitCost(state, name, state.units[name]);
   }
 
   state.totalCosts = allocation;
