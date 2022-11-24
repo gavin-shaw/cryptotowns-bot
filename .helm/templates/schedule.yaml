@@ -4,7 +4,6 @@ metadata:
   name: schedule
 spec:
   schedule: "* * * * *"
-  concurrencyPolicy: Forbid
   jobTemplate:
     spec:
       template:
